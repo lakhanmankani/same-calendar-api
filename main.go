@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	fmt.Println(samecalendar.SameCalendar(2000, -1))
+	fmt.Println(samecalendar.SameCalendar(2000, 5))
 }

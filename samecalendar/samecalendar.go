@@ -2,16 +2,15 @@ package samecalendar
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
 func isLeapYear(year int) bool {
-	if year % 4 != 0 {
+	if year%4 != 0 {
 		return false
-	} else if year % 100 != 0 {
+	} else if year%100 != 0 {
 		return true
-	} else if year % 400 != 0 {
+	} else if year%400 != 0 {
 		return false
 	}
 	return true
@@ -21,7 +20,6 @@ func yearStartDay(year int) time.Weekday {
 	date := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
 	return date.Weekday()
 }
-
 
 func yearsWithSameLeapness(year int, n int) []int {
 	var years []int
@@ -36,7 +34,6 @@ func yearsWithSameLeapness(year int, n int) []int {
 	return years
 }
 
-
 func yearsWithSameStartDay(year int, n int) []int {
 	var years []int
 	startDay := yearStartDay(year)
@@ -49,7 +46,6 @@ func yearsWithSameStartDay(year int, n int) []int {
 	}
 	return years
 }
-
 
 func intersection(a, b []int) (c []int) {
 	m := make(map[int]bool)
@@ -65,7 +61,6 @@ func intersection(a, b []int) (c []int) {
 	}
 	return
 }
-
 
 func SameCalendar(year int, n int) ([]int, error) {
 	if n == 1 {
@@ -86,12 +81,9 @@ func SameCalendar(year int, n int) ([]int, error) {
 		}
 
 		sameLeapness := yearsWithSameLeapness(lastYear, 10*n)
-		//fmt.Println(sameLeapness)
 		sameStartDate := yearsWithSameStartDay(lastYear, 10*n)
-		//fmt.Println(sameStartDate)
 		yearIntersection := intersection(sameLeapness, sameStartDate)
 		years = append(years, yearIntersection...)
 	}
-	fmt.Println(years)
 	return years[:n], nil
 }
