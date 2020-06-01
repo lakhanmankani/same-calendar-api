@@ -51,6 +51,37 @@ func registerApiKey(key []byte) {
 	}
 	stmt.Exec(hashedKeyString)
 }
+
+func authenticateApiKey(key []byte) bool {
+	h := sha256.New()
+	h.Write(key)
+	hashedKey := h.Sum(nil)
+	hashedKeyString := hex.EncodeToString(hashedKey)
+
+	db, err:= sql.Open("sqlite3", "./credentials.sqlite")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = stmt.Exec()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rows, err := db.Query("SELECT apiKey FROM credentials WHERE apiKey = ?", hashedKeyString)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for rows.Next() {
+		return true
+	}
+	return false
+}
+
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	key, err := generateRandomBytes(32)
 
@@ -67,7 +98,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// TODO: Write api key to database
 }
 
 func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
