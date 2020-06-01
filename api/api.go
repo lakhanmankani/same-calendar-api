@@ -3,9 +3,11 @@ package api
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
 )
@@ -23,6 +25,32 @@ type Register struct {
 	ApiKey string `json:"api_key"`
 }
 
+func registerApiKey(key []byte) {
+	h := sha256.New()
+	h.Write(key)
+	hashedKey := h.Sum(nil)
+	hashedKeyString := hex.EncodeToString(hashedKey)
+
+	db, err:= sql.Open("sqlite3", "./credentials.sqlite")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS keys (id INTEGER PPRIMARY KEY, apiKey TEXT)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = stmt.Exec()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt, err = db.Prepare("INSERT INTO keys (apiKey) VALUES (?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt.Exec(hashedKeyString)
+}
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	key, err := generateRandomBytes(32)
 
@@ -30,6 +58,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	h.Write(key)
 	apiKey := hex.EncodeToString(h.Sum(nil))
 	fmt.Println(apiKey)
+	registerApiKey(h.Sum(nil))
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
