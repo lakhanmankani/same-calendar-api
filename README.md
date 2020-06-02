@@ -1,6 +1,6 @@
 # same-calendar-api
 
-REST API that gives you the years that have the same calendar.
+REST API server that calculates years that have the same calendar.
 
 ## Installation:
 ```bash
