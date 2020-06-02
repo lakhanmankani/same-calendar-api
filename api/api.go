@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"github.com/lakhanmankani/same-calendar-api/samecalendar"
 	_ "github.com/mattn/go-sqlite3"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -61,7 +62,6 @@ func authenticateApiKey(key []byte) bool {
 	h.Write(key)
 	hashedKey := h.Sum(nil)
 	hashedKeyString := hex.EncodeToString(hashedKey)
-	print(hashedKeyString)
 
 	db, err := sql.Open("sqlite3", "./credentials.sqlite")
 	if err != nil {
@@ -131,6 +131,7 @@ func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		w.Header().Add("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(years)
 		if err != nil {
 			log.Fatal(err)
@@ -142,6 +143,12 @@ func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	contents := []byte("<h1>Home</h1>")
-	_, _ = w.Write(contents)
+	t, err := template.ParseFiles("html/index.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = t.Execute(w, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
