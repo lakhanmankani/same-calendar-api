@@ -23,7 +23,7 @@ Response:
 ### Get Same Calendar Years
 Request:
 ```bash
-curl -X GET localhost:8080/api/same-calendar?key=<apikey>;&year=2020&n=5
+curl -X GET localhost:8080/api/same-calendar?key=<apikey>&year=2020&n=5
 ```
 Response:
 ```json
