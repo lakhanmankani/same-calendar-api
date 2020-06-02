@@ -2,9 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>$Title$</title>
+    <title>Home</title>
 </head>
 <body>
-$END$
+<h1>Home</h1>
+<h2>Api Usage</h2>
+
+<h3>Register</h3>
+Request:
+<br>
+<code>curl -X POST localhost:8080/api/register</code>
+<br>
+Response:
+<br>
+<code>
+    {
+    key: "9842824a468b7e0a1a01c9d802eb164c568ce3d86c1b7cfa0b80a7eab0379f3e"
+    }
+</code>
+
+<h3>Get same calendar years</h3>
+Request:
+<br>
+<code>curl -X GET localhost:8080/api/same-calendar?key=&lt;apikey&gt;&year=2020&n=5</code>
+<br>
+Response:
+<br>
+<code>[2020,2048,2076,2116,2144]</code>
 </body>
 </html>
