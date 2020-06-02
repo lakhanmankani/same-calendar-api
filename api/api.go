@@ -6,10 +6,11 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"github.com/lakhanmankani/same-calendar-api/samecalendar"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func generateRandomBytes(n int) ([]byte, error) {
@@ -22,37 +23,10 @@ func generateRandomBytes(n int) ([]byte, error) {
 }
 
 type Register struct {
-	ApiKey string `json:"api_key"`
+	Key string `json:"key"`
 }
 
 func registerApiKey(key []byte) {
-	h := sha256.New()
-	h.Write(key)
-	hashedKey := h.Sum(nil)
-	hashedKeyString := hex.EncodeToString(hashedKey)
-
-	db, err:= sql.Open("sqlite3", "./credentials.sqlite")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS keys (id INTEGER PPRIMARY KEY, apiKey TEXT)")
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	stmt, err = db.Prepare("INSERT INTO keys (apiKey) VALUES (?)")
-	if err != nil {
-		log.Fatal(err)
-	}
-	stmt.Exec(hashedKeyString)
-}
-
-func authenticateApiKey(key []byte) bool {
 	h := sha256.New()
 	h.Write(key)
 	hashedKey := h.Sum(nil)
@@ -72,6 +46,39 @@ func authenticateApiKey(key []byte) bool {
 		log.Fatal(err)
 	}
 
+	stmt, err = db.Prepare("INSERT INTO credentials (apiKey) VALUES (?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = stmt.Exec(hashedKeyString)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func authenticateApiKey(key []byte) bool {
+	h := sha256.New()
+	h.Write(key)
+	hashedKey := h.Sum(nil)
+	hashedKeyString := hex.EncodeToString(hashedKey)
+	print(hashedKeyString)
+
+	db, err := sql.Open("sqlite3", "./credentials.sqlite")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
 	rows, err := db.Query("SELECT apiKey FROM credentials WHERE apiKey = ?", hashedKeyString)
 	if err != nil {
 		log.Fatal(err)
@@ -88,7 +95,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	h := sha256.New()
 	h.Write(key)
 	apiKey := hex.EncodeToString(h.Sum(nil))
-	fmt.Println(apiKey)
 	registerApiKey(h.Sum(nil))
 
 	w.WriteHeader(http.StatusCreated)
@@ -100,7 +106,38 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type SameCalendar struct {
+	Years []string `json:"years"`
+}
 func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	apiKey, err := hex.DecodeString(q.Get("key"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if authenticateApiKey(apiKey) {
+		// Authenticated
+		year, err := strconv.Atoi(q.Get("year"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		n, err := strconv.Atoi(q.Get("n"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		years, err := samecalendar.SameCalendar(year, n)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = json.NewEncoder(w).Encode(years)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		// Can't authenticate
+		w.WriteHeader(http.StatusForbidden)
+	}
 
 }
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
