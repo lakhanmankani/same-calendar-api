@@ -32,7 +32,7 @@ func registerApiKey(key []byte) {
 	hashedKey := h.Sum(nil)
 	hashedKeyString := hex.EncodeToString(hashedKey)
 
-	db, err:= sql.Open("sqlite3", "./credentials.sqlite")
+	db, err := sql.Open("sqlite3", "./credentials.sqlite")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,6 +109,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 type SameCalendar struct {
 	Years []string `json:"years"`
 }
+
 func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	apiKey, err := hex.DecodeString(q.Get("key"))
