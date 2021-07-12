@@ -11,6 +11,11 @@ func main() {
 	db := api.ConnectDB()
 	h := api.NewBaseHandler(db)
 
+	err := h.CreateCredentialsTable()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	r := mux.NewRouter()
 	r.HandleFunc("/", h.HomeHandler)
 	r.HandleFunc("/api/register", h.RegisterHandler).Methods(http.MethodPost)

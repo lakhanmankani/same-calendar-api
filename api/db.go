@@ -16,12 +16,7 @@ func ConnectDB() *sql.DB {
 	return db
 }
 
-func (h *BaseHandler) registerApiKey(key []byte) (err error) {
-	hash := sha256.New()
-	hash.Write(key)
-	hashedKey := hash.Sum(nil)
-	hashedKeyString := hex.EncodeToString(hashedKey)
-
+func (h *BaseHandler) CreateCredentialsTable() (err error) {
 	stmt, err := h.db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
 	if err != nil {
 		return err
@@ -30,8 +25,16 @@ func (h *BaseHandler) registerApiKey(key []byte) (err error) {
 	if err != nil {
 		return err
 	}
+	return nil
+}
 
-	stmt, err = h.db.Prepare("INSERT INTO credentials (apiKey) VALUES (?)")
+func (h *BaseHandler) registerApiKey(key []byte) (err error) {
+	hash := sha256.New()
+	hash.Write(key)
+	hashedKey := hash.Sum(nil)
+	hashedKeyString := hex.EncodeToString(hashedKey)
+
+	stmt, err := h.db.Prepare("INSERT INTO credentials (apiKey) VALUES (?)")
 	if err != nil {
 		return err
 	}
@@ -52,16 +55,7 @@ func (h *BaseHandler) unregisterApiKey(key []byte) (err error) {
 	hashedKey := hash.Sum(nil)
 	hashedKeyString := hex.EncodeToString(hashedKey)
 
-	stmt, err := h.db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
-	if err != nil {
-		return err
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		return err
-	}
-
-	stmt, err = h.db.Prepare("DELETE FROM credentials WHERE apiKey = (?)")
+	stmt, err := h.db.Prepare("DELETE FROM credentials WHERE apiKey = (?)")
 	if err != nil {
 		return err
 	}
@@ -77,19 +71,6 @@ func (h *BaseHandler) authenticateApiKey(key []byte) (authenticated bool, err er
 	hash.Write(key)
 	hashedKey := hash.Sum(nil)
 	hashedKeyString := hex.EncodeToString(hashedKey)
-
-	stmt, err := h.db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
-	if err != nil {
-		return false, err
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		return false, err
-	}
-	err = stmt.Close()
-	if err != nil {
-		return false, err
-	}
 
 	rows, err := h.db.Query("SELECT apiKey FROM credentials WHERE apiKey = ?", hashedKeyString)
 	if err != nil {
