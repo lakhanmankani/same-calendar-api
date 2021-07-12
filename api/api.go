@@ -14,6 +14,16 @@ import (
 	"strconv"
 )
 
+type BaseHandler struct {
+	db *sql.DB
+}
+
+func NewBaseHandler(db *sql.DB) *BaseHandler {
+	return &BaseHandler{
+		db: db,
+	}
+}
+
 func generateRandomBytes(n int) ([]byte, error) {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
@@ -27,122 +37,13 @@ type Register struct {
 	Key string `json:"key"`
 }
 
-func registerApiKey(key []byte) (err error) {
-	h := sha256.New()
-	h.Write(key)
-	hashedKey := h.Sum(nil)
-	hashedKeyString := hex.EncodeToString(hashedKey)
-
-	db, err := sql.Open("sqlite3", "./credentials.sqlite")
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	// TODO: Share DB connection
-
-	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
-	if err != nil {
-		return err
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		return err
-	}
-
-	stmt, err = db.Prepare("INSERT INTO credentials (apiKey) VALUES (?)")
-	if err != nil {
-		return err
-	}
-	_, err = stmt.Exec(hashedKeyString)
-	if err != nil {
-		return err
-	}
-	err = stmt.Close()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func authenticateApiKey(key []byte) (authenticated bool, err error) {
-	h := sha256.New()
-	h.Write(key)
-	hashedKey := h.Sum(nil)
-	hashedKeyString := hex.EncodeToString(hashedKey)
-
-	db, err := sql.Open("sqlite3", "./credentials.sqlite")
-	if err != nil {
-		return false, err
-	}
-	defer db.Close()
-
-	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
-	if err != nil {
-		return false, err
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		return false, err
-	}
-	err = stmt.Close()
-	if err != nil {
-		return false, err
-	}
-
-	rows, err := db.Query("SELECT apiKey FROM credentials WHERE apiKey = ?", hashedKeyString)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for rows.Next() {
-		err = rows.Close()
-		if err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-	return false, nil
-}
-
-func unregisterApiKey(key []byte) (err error) {
-	h := sha256.New()
-	h.Write(key)
-	hashedKey := h.Sum(nil)
-	hashedKeyString := hex.EncodeToString(hashedKey)
-
-	db, err := sql.Open("sqlite3", "./credentials.sqlite")
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
-	if err != nil {
-		return err
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		return err
-	}
-
-	stmt, err = db.Prepare("DELETE FROM credentials WHERE apiKey = (?)")
-	if err != nil {
-		return err
-	}
-	_, err = stmt.Exec(hashedKeyString)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	key, err := generateRandomBytes(32)
 
-	h := sha256.New()
-	h.Write(key)
-	apiKey := hex.EncodeToString(h.Sum(nil))
-	err = registerApiKey(h.Sum(nil))
+	hash := sha256.New()
+	hash.Write(key)
+	apiKey := hex.EncodeToString(hash.Sum(nil))
+	err = h.registerApiKey(hash.Sum(nil))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
@@ -159,14 +60,14 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func UnregisterHandler(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) UnregisterHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	apiKey, err := hex.DecodeString(q.Get("key"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	authenticated, err := authenticateApiKey(apiKey)
+	authenticated, err := h.authenticateApiKey(apiKey)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
@@ -176,7 +77,7 @@ func UnregisterHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	err = unregisterApiKey(apiKey)
+	err = h.unregisterApiKey(apiKey)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
@@ -188,14 +89,14 @@ type SameCalendar struct {
 	Years []string `json:"years"`
 }
 
-func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	apiKey, err := hex.DecodeString(q.Get("key"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	authenticated, err := authenticateApiKey(apiKey)
+	authenticated, err := h.authenticateApiKey(apiKey)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
@@ -233,7 +134,7 @@ func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	t, err := template.ParseFiles("html/index.html")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
