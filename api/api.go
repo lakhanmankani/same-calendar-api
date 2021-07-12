@@ -145,7 +145,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewEncoder(w).Encode(Register{apiKey})
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
 	}
 }
 
@@ -153,12 +154,14 @@ func UnregisterHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	apiKey, err := hex.DecodeString(q.Get("key"))
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	authenticated, err := authenticateApiKey(apiKey)
 	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
-		log.Fatal(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
 	}
 	if !authenticated {
 		w.WriteHeader(http.StatusForbidden)
@@ -175,9 +178,15 @@ func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	apiKey, err := hex.DecodeString(q.Get("key"))
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	authenticated, err := authenticateApiKey(apiKey)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
 	if !authenticated {
 		// Can't authenticate
 		w.WriteHeader(http.StatusForbidden)
@@ -187,30 +196,40 @@ func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticated
 	year, err := strconv.Atoi(q.Get("year"))
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	n, err := strconv.Atoi(q.Get("n"))
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	years, err := samecalendar.SameCalendar(year, n)
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
 	}
 	w.Header().Add("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(years)
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
 	}
 }
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	t, err := template.ParseFiles("html/index.html")
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
 	}
 	err = t.Execute(w, nil)
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
 	}
 }
