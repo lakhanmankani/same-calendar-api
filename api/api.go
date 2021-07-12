@@ -62,7 +62,7 @@ func registerApiKey(key []byte) {
 	}
 }
 
-func authenticateApiKey(key []byte) bool {
+func authenticateApiKey(key []byte) (authenticated bool, err error) {
 	h := sha256.New()
 	h.Write(key)
 	hashedKey := h.Sum(nil)
@@ -70,29 +70,34 @@ func authenticateApiKey(key []byte) bool {
 
 	db, err := sql.Open("sqlite3", "./credentials.sqlite")
 	if err != nil {
-		log.Fatal(err)
+		return false, err
 	}
-	defer db.Close()
 
 	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
 	if err != nil {
-		log.Fatal(err)
+		return false, err
 	}
-	defer stmt.Close()
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Fatal(err)
+		return false, err
+	}
+	err = stmt.Close()
+	if err != nil {
+		return false, err
 	}
 
 	rows, err := db.Query("SELECT apiKey FROM credentials WHERE apiKey = ?", hashedKeyString)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rows.Close()
 	for rows.Next() {
-		return true
+		err = rows.Close()
+		if err != nil {
+			return false, err
+		}
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func unregisterApiKey(key []byte) {
@@ -150,7 +155,12 @@ func UnregisterHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if !authenticateApiKey(apiKey) {
+	authenticated, err := authenticateApiKey(apiKey)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		log.Fatal(err)
+	}
+	if !authenticated {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -167,31 +177,32 @@ func SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if authenticateApiKey(apiKey) {
-		// Authenticated
-		year, err := strconv.Atoi(q.Get("year"))
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		n, err := strconv.Atoi(q.Get("n"))
-		if err != nil {
-			log.Fatal(err)
-		}
-		years, err := samecalendar.SameCalendar(year, n)
-		if err != nil {
-			log.Fatal(err)
-		}
-		w.Header().Add("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(years)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
+	authenticated, err := authenticateApiKey(apiKey)
+	if !authenticated {
 		// Can't authenticate
 		w.WriteHeader(http.StatusForbidden)
+		return
 	}
 
+	// Authenticated
+	year, err := strconv.Atoi(q.Get("year"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	n, err := strconv.Atoi(q.Get("n"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	years, err := samecalendar.SameCalendar(year, n)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Add("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(years)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	t, err := template.ParseFiles("html/index.html")
