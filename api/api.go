@@ -27,7 +27,7 @@ type Register struct {
 	Key string `json:"key"`
 }
 
-func registerApiKey(key []byte) {
+func registerApiKey(key []byte) (err error) {
 	h := sha256.New()
 	h.Write(key)
 	hashedKey := h.Sum(nil)
@@ -35,31 +35,33 @@ func registerApiKey(key []byte) {
 
 	db, err := sql.Open("sqlite3", "./credentials.sqlite")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer db.Close()
+	// TODO: Share DB connection
 
 	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	stmt, err = db.Prepare("INSERT INTO credentials (apiKey) VALUES (?)")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	_, err = stmt.Exec(hashedKeyString)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	err = stmt.Close()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 func authenticateApiKey(key []byte) (authenticated bool, err error) {
@@ -72,6 +74,7 @@ func authenticateApiKey(key []byte) (authenticated bool, err error) {
 	if err != nil {
 		return false, err
 	}
+	defer db.Close()
 
 	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
 	if err != nil {
@@ -100,7 +103,7 @@ func authenticateApiKey(key []byte) (authenticated bool, err error) {
 	return false, nil
 }
 
-func unregisterApiKey(key []byte) {
+func unregisterApiKey(key []byte) (err error) {
 	h := sha256.New()
 	h.Write(key)
 	hashedKey := h.Sum(nil)
@@ -108,27 +111,28 @@ func unregisterApiKey(key []byte) {
 
 	db, err := sql.Open("sqlite3", "./credentials.sqlite")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer db.Close()
 
 	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	stmt, err = db.Prepare("DELETE FROM credentials WHERE apiKey = (?)")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	_, err = stmt.Exec(hashedKeyString)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 
@@ -138,7 +142,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	h := sha256.New()
 	h.Write(key)
 	apiKey := hex.EncodeToString(h.Sum(nil))
-	registerApiKey(h.Sum(nil))
+	err = registerApiKey(h.Sum(nil))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
@@ -167,7 +176,12 @@ func UnregisterHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	unregisterApiKey(apiKey)
+	err = unregisterApiKey(apiKey)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
 }
 
 type SameCalendar struct {
