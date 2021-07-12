@@ -37,6 +37,7 @@ func registerApiKey(key []byte) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
 	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
 	if err != nil {
@@ -55,6 +56,10 @@ func registerApiKey(key []byte) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = stmt.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func authenticateApiKey(key []byte) bool {
@@ -67,6 +72,7 @@ func authenticateApiKey(key []byte) bool {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
 	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
 	if err != nil {
@@ -77,17 +83,49 @@ func authenticateApiKey(key []byte) bool {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer stmt.Close()
 
 	rows, err := db.Query("SELECT apiKey FROM credentials WHERE apiKey = ?", hashedKeyString)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer rows.Close()
 	for rows.Next() {
 		return true
 	}
 	return false
 }
+
+func unregisterApiKey(key []byte) {
+	h := sha256.New()
+	h.Write(key)
+	hashedKey := h.Sum(nil)
+	hashedKeyString := hex.EncodeToString(hashedKey)
+
+	db, err := sql.Open("sqlite3", "./credentials.sqlite")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = stmt.Exec()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt, err = db.Prepare("DELETE FROM credentials WHERE apiKey = (?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = stmt.Exec(hashedKeyString)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	key, err := generateRandomBytes(32)
@@ -104,6 +142,19 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func UnregisterHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	apiKey, err := hex.DecodeString(q.Get("key"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !authenticateApiKey(apiKey) {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	unregisterApiKey(apiKey)
 }
 
 type SameCalendar struct {
