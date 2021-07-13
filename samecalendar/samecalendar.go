@@ -40,12 +40,17 @@ func nextYearWithSameStartDay(year int) (nextYear int) {
 	return nextYear
 }
 
-func SameCalendar(year int, n int) ([]int, error) {
+func SameCalendar(year int, n int) (years []int, err error) {
+	// TODO: Implement backward calculation
+	if year < 0 {
+		err = errors.New("year must not be negative")
+		return nil, err
+	}
 	if n < 0 {
 		err := errors.New("n must be greater than 0")
 		return nil, err
 	}
-	var years = []int{year}
+	years = []int{year}
 
 	for len(years) < n {
 		lastYear := years[len(years)-1]

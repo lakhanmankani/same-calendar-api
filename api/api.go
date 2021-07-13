@@ -116,6 +116,10 @@ func (h *BaseHandler) SameCalendarHandler(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if year < 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	n, err := strconv.Atoi(q.Get("n"))
 	if err != nil {
