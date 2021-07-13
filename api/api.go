@@ -136,6 +136,7 @@ func (h *BaseHandler) SameCalendarHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 }
+
 func (h *BaseHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	t, err := template.ParseFiles("html/index.html")
 	if err != nil {
