@@ -32,7 +32,7 @@ func generateRandomBytes(n int) ([]byte, error) {
 	return b, nil
 }
 
-type Register struct {
+type registerResponse struct {
 	Key string `json:"key"`
 }
 
@@ -55,7 +55,7 @@ func (h *BaseHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 
-	err = json.NewEncoder(w).Encode(Register{keyString})
+	err = json.NewEncoder(w).Encode(registerResponse{keyString})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
@@ -87,8 +87,8 @@ func (h *BaseHandler) UnregisterHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-type SameCalendar struct {
-	Years []string `json:"years"`
+type sameCalendarResponse struct {
+	Years []int `json:"years"`
 }
 
 func (h *BaseHandler) SameCalendarHandler(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +129,7 @@ func (h *BaseHandler) SameCalendarHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.Header().Add("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(years)
+	err = json.NewEncoder(w).Encode(sameCalendarResponse{years})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
