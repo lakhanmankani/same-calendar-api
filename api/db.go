@@ -16,6 +16,12 @@ func ConnectDB() *sql.DB {
 	return db
 }
 
+func hashKey(key []byte) []byte {
+	hash := sha256.New()
+	hash.Write(key)
+	return hash.Sum(nil)
+}
+
 func (h *BaseHandler) CreateCredentialsTable() (err error) {
 	stmt, err := h.db.Prepare("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PPRIMARY KEY, apiKey TEXT)")
 	if err != nil {
@@ -29,9 +35,7 @@ func (h *BaseHandler) CreateCredentialsTable() (err error) {
 }
 
 func (h *BaseHandler) registerApiKey(key []byte) (err error) {
-	hash := sha256.New()
-	hash.Write(key)
-	hashedKey := hash.Sum(nil)
+	hashedKey := hashKey(key)
 	hashedKeyString := hex.EncodeToString(hashedKey)
 
 	stmt, err := h.db.Prepare("INSERT INTO credentials (apiKey) VALUES (?)")
@@ -50,9 +54,7 @@ func (h *BaseHandler) registerApiKey(key []byte) (err error) {
 }
 
 func (h *BaseHandler) unregisterApiKey(key []byte) (err error) {
-	hash := sha256.New()
-	hash.Write(key)
-	hashedKey := hash.Sum(nil)
+	hashedKey := hashKey(key)
 	hashedKeyString := hex.EncodeToString(hashedKey)
 
 	stmt, err := h.db.Prepare("DELETE FROM credentials WHERE apiKey = (?)")
@@ -67,14 +69,12 @@ func (h *BaseHandler) unregisterApiKey(key []byte) (err error) {
 }
 
 func (h *BaseHandler) authenticateApiKey(key []byte) (authenticated bool, err error) {
-	hash := sha256.New()
-	hash.Write(key)
-	hashedKey := hash.Sum(nil)
+	hashedKey := hashKey(key)
 	hashedKeyString := hex.EncodeToString(hashedKey)
 
 	rows, err := h.db.Query("SELECT apiKey FROM credentials WHERE apiKey = ?", hashedKeyString)
 	if err != nil {
-		log.Fatal(err)
+		return false, err
 	}
 	for rows.Next() {
 		err = rows.Close()

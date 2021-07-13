@@ -2,7 +2,6 @@ package api
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -39,11 +38,14 @@ type Register struct {
 
 func (h *BaseHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	key, err := generateRandomBytes(32)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+	keyString := hex.EncodeToString(key)
 
-	hash := sha256.New()
-	hash.Write(key)
-	apiKey := hex.EncodeToString(hash.Sum(nil))
-	err = h.registerApiKey(hash.Sum(nil))
+	err = h.registerApiKey(key)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
@@ -53,7 +55,7 @@ func (h *BaseHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 
-	err = json.NewEncoder(w).Encode(Register{apiKey})
+	err = json.NewEncoder(w).Encode(Register{keyString})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
