@@ -40,8 +40,26 @@ func nextYearWithSameStartDay(year int) (nextYear int) {
 	return nextYear
 }
 
-func SameCalendar(year int, n int) (years []int, err error) {
-	// TODO: Implement backward calculation
+func previousYearWithSameLeapness(year int) (nextYear int) {
+	isLeap := isLeapYear(year)
+	nextYear = year - 1
+	for isLeapYear(nextYear) != isLeap {
+		nextYear -= 1
+	}
+	return nextYear
+}
+
+func previousYearWithSameStartDay(year int) (nextYear int) {
+	startDay := yearStartDay(year)
+	nextYear = year - 5
+
+	for yearStartDay(nextYear) != startDay {
+		nextYear -= 1
+	}
+	return nextYear
+}
+
+func forwardSameCalendar(year int, n int) (years []int, err error) {
 	if year < 0 {
 		err = errors.New("year must not be negative")
 		return nil, err
@@ -67,4 +85,39 @@ func SameCalendar(year int, n int) (years []int, err error) {
 		years = append(years, nextSameLeap)
 	}
 	return years, nil
+}
+
+func backwardSameCalendar(year int, n int) (years []int, err error) {
+	if year < 0 {
+		err = errors.New("year must not be negative")
+		return nil, err
+	}
+	if n < 0 {
+		err := errors.New("n must be greater than 0")
+		return nil, err
+	}
+	years = []int{year}
+
+	for len(years) < n {
+		lastYear := years[len(years)-1]
+
+		prevSameLeap := previousYearWithSameLeapness(lastYear)
+		prevSameDay := previousYearWithSameStartDay(lastYear)
+		for prevSameLeap != prevSameDay {
+			if prevSameLeap < prevSameDay {
+				prevSameDay = previousYearWithSameStartDay(prevSameDay)
+			} else if prevSameDay < prevSameLeap {
+				prevSameLeap = previousYearWithSameLeapness(prevSameLeap)
+			}
+		}
+		years = append(years, prevSameLeap)
+	}
+	return years, nil
+}
+
+func SameCalendar(year int, n int, forward bool) (years []int, err error) {
+	if forward {
+		return forwardSameCalendar(year, n)
+	}
+	return backwardSameCalendar(year, n)
 }
