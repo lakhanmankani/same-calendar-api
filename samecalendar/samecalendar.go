@@ -110,6 +110,9 @@ func backwardSameCalendar(year int, n int) (years []int, err error) {
 				prevSameLeap = previousYearWithSameLeapness(prevSameLeap)
 			}
 		}
+		if prevSameLeap < 0 {
+			break
+		}
 		years = append(years, prevSameLeap)
 	}
 	return years, nil
