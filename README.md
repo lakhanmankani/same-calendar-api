@@ -47,5 +47,5 @@ Response:
 ### Unregister
 Request:
 ```shell
-curl -X DELETE "localhost:8080/api/unregister?key=1ed6b3278c31d0e9336daa2fc2f328ccdf23cbeea9adf4653d988b3d3f87ba08"
+curl -X DELETE localhost:8080/api/unregister?key=<apikey>
 ```
