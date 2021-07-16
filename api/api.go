@@ -135,6 +135,10 @@ func (h *BaseHandler) SameCalendarHandler(w http.ResponseWriter, r *http.Request
 
 	years, err := samecalendar.SameCalendar(year, n, forward)
 	if err != nil {
+		if err == samecalendar.ErrorNegativeYear || err == samecalendar.ErrorNegativeN {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
 		return

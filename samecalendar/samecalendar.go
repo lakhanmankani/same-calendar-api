@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+var ErrorNegativeYear = errors.New("year must not be negative")
+var ErrorNegativeN = errors.New("n must be greater than 0")
+
 func isLeapYear(year int) bool {
 	if year%4 != 0 {
 		return false
@@ -61,12 +64,10 @@ func previousYearWithSameStartDay(year int) (nextYear int) {
 
 func forwardSameCalendar(year int, n int) (years []int, err error) {
 	if year < 0 {
-		err = errors.New("year must not be negative")
-		return nil, err
+		return nil, ErrorNegativeYear
 	}
 	if n < 0 {
-		err := errors.New("n must be greater than 0")
-		return nil, err
+		return nil, ErrorNegativeN
 	}
 	years = []int{year}
 
@@ -89,12 +90,10 @@ func forwardSameCalendar(year int, n int) (years []int, err error) {
 
 func backwardSameCalendar(year int, n int) (years []int, err error) {
 	if year < 0 {
-		err = errors.New("year must not be negative")
-		return nil, err
+		return nil, ErrorNegativeYear
 	}
 	if n < 0 {
-		err := errors.New("n must be greater than 0")
-		return nil, err
+		return nil, ErrorNegativeN
 	}
 	years = []int{year}
 
