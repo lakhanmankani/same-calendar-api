@@ -69,6 +69,9 @@ func forwardSameCalendar(year int, n int) (years []int, err error) {
 	if n < 0 {
 		return nil, ErrorNegativeN
 	}
+	if n == 0 {
+		return []int{}, nil
+	}
 	years = []int{year}
 
 	for len(years) < n {
@@ -94,6 +97,9 @@ func backwardSameCalendar(year int, n int) (years []int, err error) {
 	}
 	if n < 0 {
 		return nil, ErrorNegativeN
+	}
+	if n == 0 {
+		return []int{}, nil
 	}
 	years = []int{year}
 
