@@ -6,7 +6,7 @@ import (
 )
 
 var ErrorNegativeYear = errors.New("year must not be negative")
-var ErrorNegativeN = errors.New("n must be greater than 0")
+var ErrorNegativeN = errors.New("n must not be negative")
 
 func isLeapYear(year int) bool {
 	if year%4 != 0 {
